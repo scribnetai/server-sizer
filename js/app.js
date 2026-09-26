@@ -740,6 +740,17 @@ function clearSession() {
 function wireApp() {
   document.querySelector('.cta').addEventListener('click', (e) => { e.preventDefault(); startWizard(); });
   $('brandHome').addEventListener('click', (e) => { e.preventDefault(); $('wizard').hidden = true; $('landing').hidden = false; window.scrollTo({ top: 0 }); });
+  // Nav anchor links must work while the wizard is open: exit to landing first, then scroll.
+  document.querySelectorAll('.nav-links a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href').slice(1);
+    if (id && !$('wizard').hidden) {
+      e.preventDefault();
+      $('wizard').hidden = true;
+      $('landing').hidden = false;
+      const t = document.getElementById(id);
+      if (t) t.scrollIntoView();
+    }
+  }));
 
   const dz = $('dropzone'), fi = $('fileInput');
   dz.addEventListener('click', () => fi.click());
