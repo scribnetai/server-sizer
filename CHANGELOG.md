@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-09-26
+- Added GHz as a fourth sizing dimension alongside vCPU, RAM, and HCI storage — demand assumes a tunable sustained GHz per vCPU (default 0.5), checked against physical host clocks (cores × base clock, no overcommit). A new "GHz-bound" binding constraint calls out when clock demand sets the host count.
+- Added Intel Xeon 6 CPU picker to the per-cluster config: 11 real SKUs (6900P/6700P/6500P P-cores plus the 144-core 6780E) with published base clocks; platform presets now ship with sensible default CPUs. Editing cores or clock flips the CPU to Custom.
+- Build plan now shows per-host and total GHz, GHz worked-math steps, GHz in the downloadable report, and a GHz-bound SE finding.
+- Fixed the "Is anything stored in my browser?" FAQ — it still claimed nothing goes to localStorage, but the Projects feature (named saves + autosave) does use localStorage on this machine only.
 - Added 💾 Projects: named saves in this browser, portable JSON export/import, and automatic session restore (your last session reloads on revisit). Saves capture clusters, per-cluster configs, and tuning — nothing uploaded.
 - Launched Server Sizer v1: three-step VMware refresh sizing wizard — load demand, configure each cluster, build plan.
 - Load demand from an RVTools .xlsx export, manual cluster entry, or one-click demo data.
