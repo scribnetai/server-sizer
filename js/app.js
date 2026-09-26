@@ -290,6 +290,7 @@ function parseWorkbook(wb, fileName) {
   APP.fileName = fileName;
   setStatus('Parsed <strong>' + fmtInt(vms.length) + '</strong> VMs and <strong>' + fmtInt(hosts.length) + '</strong> hosts → <strong>' + clusters.length + '</strong> clusters.' + (skipped ? ' (' + skipped + ' empty skipped)' : ''));
   renderInventory();
+  queueAutosave();
 }
 
 async function handleFile(file) {
@@ -313,6 +314,7 @@ function loadDemo() {
   APP.fileName = 'demo-environment';
   setStatus('Loaded <strong>demo environment</strong>: 3 synthetic clusters with different profiles (general, memory-heavy DB, ROBO edge). Generated in your browser — nothing uploaded.');
   renderInventory();
+  queueAutosave();
 }
 
 /* ---- Manual entry ---- */
@@ -361,6 +363,7 @@ function applyManual() {
   APP.fileName = 'manual-entry';
   setStatus('Using <strong>' + clusters.length + '</strong> manually entered cluster' + (clusters.length > 1 ? 's' : '') + '. "Actual utilization" sizing basis is unavailable without export data — allocated totals are used.');
   renderInventory();
+  queueAutosave();
 }
 
 function renderInventory() {
@@ -499,6 +502,7 @@ function onCfgInput(cid, card) {
   cfg.storageRepl = segVal('storageRepl') || 'mirror';
   card.querySelectorAll('[data-hci-only]').forEach((el) => { el.hidden = !cfg.hci; });
   refreshPreviews();
+  queueAutosave();
 }
 
 function refreshPreviews() {
@@ -745,9 +749,183 @@ function renderChangelog() {
     .catch(() => { body.innerHTML = "<p class='muted'>Changelog unavailable.</p>"; });
 }
 
+
+/* ================= Projects: save / load / export / import ================= */
+const LS_AUTO = 'server-sizer:autosave';
+const LS_PROJECTS = 'server-sizer:projects';
+const PROJECT_VERSION = 1;
+
+function hasDemand(s) { const st = s || APP; return Array.isArray(st.clusters) && st.clusters.length > 0; }
+function serializeState() {
+  return {
+    clusters: APP.clusters, cfgs: APP.cfgs,
+    source: APP.source, fileName: APP.fileName,
+  };
+}
+function projectEnvelope(name, state) {
+  return {
+    app: 'server-sizer', version: PROJECT_VERSION,
+    name: (name || 'Untitled project').slice(0, 60),
+    savedAt: new Date().toISOString(),
+    state: state || serializeState(),
+  };
+}
+function validProject(d) {
+  return !!(d && d.app === 'server-sizer' && d.state &&
+    Array.isArray(d.state.clusters) && typeof d.version === 'number' && d.version <= PROJECT_VERSION);
+}
+function slugify(s) { return String(s || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'project'; }
+function fmtTime(iso) {
+  try { return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+
+let toastT = null;
+function showToast(html, ms) {
+  const t = $('projToast');
+  t.innerHTML = html; t.hidden = false;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { t.hidden = true; }, ms || 6000);
+}
+function updateProjName() { $('projName').textContent = APP.projectName || 'Untitled project'; }
+
+function applyProject(env) {
+  const s = env.state || {};
+  APP.clusters = Array.isArray(s.clusters) ? s.clusters : [];
+  APP.cfgs = (s.cfgs && typeof s.cfgs === 'object') ? s.cfgs : {};
+  APP.source = s.source || null; APP.fileName = s.fileName || null; APP.results = null;
+  APP.projectName = env.name || 'Untitled project';
+  if (!APP.clusters.length) { showToast('That project has no demand data \u2014 nothing to restore.'); return; }
+  clearMsgs();
+  $('landing').hidden = true; $('wizard').hidden = false;
+  renderInventory();
+  queueAutosave();
+  renderConfig();
+  setStep(1);
+  updateProjName();
+  queueAutosave();
+}
+
+/* ---- autosave (this browser only) ---- */
+let autosaveT = null;
+function queueAutosave() { clearTimeout(autosaveT); autosaveT = setTimeout(autosaveNow, 900); }
+function autosaveNow() {
+  if (!hasDemand()) return;
+  try {
+    localStorage.setItem(LS_AUTO, JSON.stringify(projectEnvelope(APP.projectName, serializeState())));
+    $('projSaved').textContent = '\u00B7 autosaved ' + fmtTime(new Date().toISOString());
+  } catch (e) { /* private mode / quota — non-fatal */ }
+}
+function clearAutosave() { try { localStorage.removeItem(LS_AUTO); } catch (e) {} }
+
+/* ---- named projects (this browser only) ---- */
+function getProjects() { try { return JSON.parse(localStorage.getItem(LS_PROJECTS) || '[]'); } catch (e) { return []; } }
+function setProjects(list) { try { localStorage.setItem(LS_PROJECTS, JSON.stringify(list.slice(0, 30))); } catch (e) {} }
+function renderProjList() {
+  const list = getProjects();
+  const box = $('projList');
+  if (!list.length) { box.innerHTML = '<p class="muted" style="font-size:.85rem">No saved projects yet — name it above and hit <strong>Save project</strong>.</p>'; return; }
+  box.innerHTML = list.map((p) => {
+    const meta = ((p.state && p.state.clusters) ? p.state.clusters.length : 0) + ' clusters';
+    return '<div class="proj-item"><div><div class="nm">' + esc(p.name || 'Untitled project') + '</div>' +
+      '<div class="meta">saved ' + esc(fmtTime(p.savedAt)) + ' \u00B7 ' + esc(meta) + '</div></div>' +
+      '<div class="ops"><button class="btn ghost" data-load="' + p.id + '">Load</button>' +
+      '<button class="btn danger-ghost" data-delp="' + p.id + '">Delete</button></div></div>';
+  }).join('');
+  box.querySelectorAll('[data-load]').forEach((b) => { b.onclick = () => {
+    const p = getProjects().find((x) => x.id === b.dataset.load);
+    if (p && validProject(p)) { $('projPanel').hidden = true; applyProject(p); showToast('Loaded project <strong>' + esc(p.name || '') + '</strong>.'); }
+    else showToast('Could not load that project — the saved data looks invalid.');
+  }; });
+  box.querySelectorAll('[data-delp]').forEach((b) => { b.onclick = () => {
+    setProjects(getProjects().filter((x) => x.id !== b.dataset.delp));
+    renderProjList();
+  }; });
+}
+function saveNamedProject() {
+  if (!hasDemand()) { showToast('Load some demand first — there is nothing to save yet.'); return; }
+  const input = $('projNameInput').value.trim();
+  const name = (input || APP.projectName || 'Untitled project').slice(0, 60);
+  const list = getProjects();
+  const env = projectEnvelope(name, serializeState());
+  env.id = 'p' + Date.now().toString(36);
+  const ix = list.findIndex((p) => (p.name || '') === name);
+  if (ix >= 0) { env.id = list[ix].id; list[ix] = env; } else list.unshift(env);
+  setProjects(list);
+  APP.projectName = name; updateProjName();
+  $('projNameInput').value = '';
+  renderProjList();
+  showToast('Project <strong>' + esc(name) + '</strong> saved in this browser.');
+  queueAutosave();
+}
+
+/* ---- export / import (.json) ---- */
+function exportProject() {
+  if (!hasDemand()) { showToast('Load some demand first — there is nothing to export yet.'); return; }
+  const env = projectEnvelope(APP.projectName, serializeState());
+  const blob = new Blob([JSON.stringify(env, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'server-sizer-' + slugify(env.name) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  showToast('Exported <strong>' + esc(a.download) + '</strong> — keep it with the engagement files.');
+}
+function importProjectFile(file) {
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!validProject(d)) { showToast('<strong>Not a server-sizer project file.</strong> Pick a JSON exported from this app.'); return; }
+      $('projPanel').hidden = true;
+      applyProject(d);
+      showToast('Imported project <strong>' + esc(d.name || 'Untitled') + '</strong>.');
+    } catch (e) { showToast('<strong>Could not read that file.</strong> ' + esc(e.message || '')); }
+  };
+  rd.readAsText(file);
+}
+
+function wireProjects() {
+  const toggle = () => {
+    const p = $('projPanel');
+    p.hidden = !p.hidden;
+    if (!p.hidden) {
+      $('projNameInput').value = APP.projectName === 'Untitled project' ? '' : APP.projectName;
+      renderProjList();
+      $('projNameInput').focus();
+    }
+  };
+  $('projBtn').onclick = toggle;
+  $('projDoSave').onclick = saveNamedProject;
+  $('projNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNamedProject(); });
+  $('projExportBtn').onclick = exportProject;
+  $('projImportBtn').onclick = () => $('projImportFile').click();
+  $('projImportFile').addEventListener('change', (e) => { importProjectFile(e.target.files[0]); e.target.value = ''; });
+  // restore last session, if any
+  try {
+    const raw = localStorage.getItem(LS_AUTO);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (validProject(d) && hasDemand(d.state)) {
+        applyProject(d);
+        showToast('Restored your last session — <strong>' + esc(d.name || '') + '</strong> &nbsp;·&nbsp; <a id="toastFresh">start fresh</a>', 10000);
+        const f = $('toastFresh');
+        if (f) f.onclick = () => { clearSession(); $('projToast').hidden = true; };
+      }
+    }
+  } catch (e) { /* corrupted autosave — start clean */ }
+}
+
+// Export for node unit tests (guarded — undefined in the browser)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { serializeState, projectEnvelope, validProject, hasDemand };
+}
+
 /* ================= Wiring ================= */
 function clearSession() {
   APP.clusters = []; APP.cfgs = {}; APP.source = null; APP.fileName = null; APP.results = null;
+  clearAutosave(); APP.projectName = 'Untitled project'; updateProjName(); $('projSaved').textContent = '';
   $('inventoryWrap').hidden = true;
   $('manualEditor').hidden = true;
   $('manualBody').innerHTML = '';
@@ -759,6 +937,7 @@ function clearSession() {
 }
 
 function wireApp() {
+  wireProjects();
   document.querySelector('.cta').addEventListener('click', (e) => { e.preventDefault(); startWizard(); });
   $('brandHome').addEventListener('click', (e) => { e.preventDefault(); $('wizard').hidden = true; $('landing').hidden = false; window.scrollTo({ top: 0 }); });
   // Nav anchor links must work while the wizard is open: exit to landing first, then scroll.
@@ -799,4 +978,4 @@ function wireApp() {
   renderChangelog();
 }
 
-document.addEventListener('DOMContentLoaded', wireApp);
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', wireApp);
