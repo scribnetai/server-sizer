@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-09-26
+- Restyled to a Physgun-style dark gaming-host vibe: near-black navy background with radial blue glow, Outfit display font, blue→cyan gradients, blue-gradient glyph tiles on section headings, and pill-style segmented option groups.
+- Sliders are now custom-styled (glowing blue→cyan fill driven by a --fill var, white thumb with blue halo, min/mid/max scale labels) and every live value shows in a dark-blue pill badge that flashes on change — all outputs update in real time as you drag.
+- Each cluster config card now has a live "⚡ What's driving this build" section: animated per-dimension bars (CPU/GHz/RAM/storage) proportional to each dimension's host count, with the binding constraint highlighted — they animate on every input change.
+- Build plan results show the same "what's driving this build" bars per cluster, and the big stat numbers (hosts, license cores) now render in gradient text. Sections and cards fade/slide in on scroll.
+- Hero gets a banner illustration strip; FAQ items are emoji-prefixed (🔒 💾 📊 🎛️ ⚡ 📄 🧪 🧮 📴 🤔 💵) and section headings carry eyebrow labels.
 - Added six more CPUs to the picker: the low-core ROBO tier (6507P 8c @ 3.5 GHz, 6505P 12c @ 2.2, 6517P 16c @ 3.2, 6520P 24c @ 2.4), the new 12-core 6377P entry part (3.1 GHz, 95W), and the 64-core 6710E (2.4 GHz) for smaller efficiency plays. Catalog is now 17 named Xeon SKUs plus Custom.
 - Added GHz as a fourth sizing dimension alongside vCPU, RAM, and HCI storage — demand assumes a tunable sustained GHz per vCPU (default 0.5), checked against physical host clocks (cores × base clock, no overcommit). A new "GHz-bound" binding constraint calls out when clock demand sets the host count.
 - Added Intel Xeon 6 CPU picker to the per-cluster config: 11 real SKUs (6900P/6700P/6500P P-cores plus the 144-core 6780E) with published base clocks; platform presets now ship with sensible default CPUs. Editing cores or clock flips the CPU to Custom.
