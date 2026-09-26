@@ -724,6 +724,27 @@ function downloadReport() {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 
+/* ================= Changelog ================= */
+function renderChangelog() {
+  const body = $('changelog-body');
+  if (!body) return;
+  fetch('CHANGELOG.md', { cache: 'no-store' })
+    .then((res) => { if (!res.ok) throw new Error('bad status'); return res.text(); })
+    .then((md) => {
+      let html = '', inList = false;
+      const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+      for (const line of md.split('\n')) {
+        if (line.startsWith('## ')) { closeList(); html += '<h4>' + esc(line.slice(3).trim()) + '</h4>'; }
+        else if (line.startsWith('- ')) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + esc(line.slice(2).trim()) + '</li>'; }
+        else if (line.trim() === '' || line.startsWith('# ')) { closeList(); }
+        else { closeList(); html += '<p>' + esc(line.trim()) + '</p>'; }
+      }
+      closeList();
+      body.innerHTML = html;
+    })
+    .catch(() => { body.innerHTML = "<p class='muted'>Changelog unavailable.</p>"; });
+}
+
 /* ================= Wiring ================= */
 function clearSession() {
   APP.clusters = []; APP.cfgs = {}; APP.source = null; APP.fileName = null; APP.results = null;
@@ -775,6 +796,7 @@ function wireApp() {
   $('printBtn').onclick = () => window.print();
   $('dlReportBtn').onclick = downloadReport;
   $('clearBtn').onclick = clearSession;
+  renderChangelog();
 }
 
 document.addEventListener('DOMContentLoaded', wireApp);
