@@ -67,19 +67,22 @@
       <h3 class="mt" id="math">Sizing math, explained</h3>
       <p class="muted">For each cluster, demand is computed from your chosen basis (<strong>allocated</strong> resources or <strong>actual utilization</strong> from the export), then divided by usable per-host capacity:</p>
       <p><code>cpu hosts = ceil( demand vCPU ÷ (host cores × cpu overcommit × (1 − growth)) )</code></p>
+      <p><code>ghz hosts = ceil( demand vCPU × ghz/vCPU ÷ (host cores × base clock × (1 − growth)) )</code></p>
       <p><code>mem hosts = ceil( demand vRAM ÷ (host RAM × ram overcommit × (1 − growth)) )</code></p>
-      <p><code>build hosts = max(cpu hosts, mem hosts, storage hosts) + redundancy spares</code></p>
-      <p class="muted">The binding constraint (CPU, RAM, or storage) is called out explicitly per cluster — that's usually where the presales conversation lives. Worked example:</p>
+      <p><code>build hosts = max(cpu hosts, ghz hosts, mem hosts, storage hosts) + redundancy spares</code></p>
+      <p class="muted">The GHz dimension checks your clock assumptions against the silicon: demand assumes a sustained GHz per vCPU (tunable, default 0.5), and each host contributes its physical clocks (cores × base clock of the selected Xeon 6 SKU — no overcommit, since overcommit is already expressed in the vCPU ratio). If the GHz count wins, your overcommit is promising more sustained clock than the cores deliver. The binding constraint (CPU, GHz, RAM, or storage) is called out explicitly per cluster — that's usually where the presales conversation lives. Worked example:</p>
       <table class="data">
         <thead><tr><th>Step</th><th>Numbers</th><th class="num">Result</th></tr></thead>
         <tbody>
           <tr><td>Demand (allocated)</td><td>400 vCPU · 3.2 TB RAM · 20% growth</td><td class="num">—</td></tr>
-          <tr><td>Target host</td><td>2× 32c · 1 TB RAM · 4:1 CPU / 1.25:1 RAM overcommit</td><td class="num">—</td></tr>
+          <tr><td>Target host</td><td>2× 32c Xeon 6745P @ 3.1 GHz · 1 TB RAM · 4:1 CPU / 1.25:1 RAM overcommit</td><td class="num">—</td></tr>
           <tr><td>Usable CPU/host</td><td>64 × 4 × 0.8</td><td class="num">204.8 vCPU</td></tr>
           <tr><td>Usable RAM/host</td><td>1024 × 1.25 × 0.8</td><td class="num">1024 GB</td></tr>
+          <tr><td>Usable GHz/host</td><td>64 × 3.1 × 0.8</td><td class="num">158.7 GHz</td></tr>
           <tr><td>CPU hosts</td><td>ceil(400 ÷ 204.8)</td><td class="num">2</td></tr>
           <tr><td>RAM hosts</td><td>ceil(3276.8 ÷ 1024)</td><td class="num"><strong>4 ← binding</strong></td></tr>
-          <tr><td>Build (N+1)</td><td>max(2, 4) + 1 spare</td><td class="num"><strong>5 hosts</strong></td></tr>
+          <tr><td>GHz hosts</td><td>ceil(400 × 0.5 ÷ 158.7)</td><td class="num">2</td></tr>
+          <tr><td>Build (N+1)</td><td>max(2, 4, 2) + 1 spare</td><td class="num"><strong>5 hosts</strong></td></tr>
         </tbody>
       </table>
       <p class="muted">That cluster is <strong>memory-bound</strong> — the SE takeaway: spec more RAM per host (or a denser platform) before adding boxes. Every cluster in the tool shows this worked math with your numbers plugged in.</p>
@@ -101,9 +104,10 @@
       <h2>Frequently asked questions</h2>
       <div class="faq-list">
         <details><summary>Is my data uploaded anywhere?</summary><p>No. Files are read with the browser's FileReader API and parsed in memory by a vendored copy of SheetJS running in this page; manual entries never leave the form. There is no server and no network request carrying your data — check devtools' network tab, or disconnect after the page loads.</p></details>
-        <details><summary>Is anything stored in my browser?</summary><p>No. Everything lives in the page's JavaScript memory for the session. Nothing goes to localStorage, IndexedDB, or cookies. Hit "Clear session data" or close the tab and it's gone.</p></details>
+        <details><summary>Is anything stored in my browser?</summary><p>Only if you use the Projects feature: named projects and the autosaved session live in localStorage on this machine only — never uploaded. Everything else lives in the page's JavaScript memory for the session. Hit "Clear session data" or close the tab and the in-memory analysis is gone.</p></details>
         <details><summary>Do I need an RVTools export, or can I type numbers in?</summary><p>Either. The export gives you per-cluster demand automatically (plus utilization and current-state licensing). Manual entry just needs cluster-level totals: VMs, vCPUs, RAM, storage, and optionally current hosts — five minutes with the customer's capacity spreadsheet.</p></details>
         <details><summary>What's the "configure each cluster" step for?</summary><p>Refreshes are never one-size-fits-all: the VDI cluster wants dense hosts, the database cluster wants RAM, the ROBO site wants N+2. The mid-step lets you set target host specs, growth, overcommit, redundancy, and HCI storage per cluster before the final math runs — with a live host-count preview as you tune.</p></details>
+        <details><summary>Why does it model GHz as well as vCPUs?</summary><p>Because vCPU count alone hides clock speed: a 128-core 2.0 GHz host and a 32-core 3.5 GHz host look very different to clock-sensitive workloads. Each target CPU is a real Intel Xeon 6 SKU with its published base clock (turbo ignored — sustained sizing). The tool checks your assumed sustained GHz per vCPU against the physical clocks per host; when GHz sets the host count, your overcommit ratio is promising more clock than the silicon delivers — pick a higher-clock SKU or ease off the overcommit.</p></details>
         <details><summary>Can I share the results with my team or the customer?</summary><p>Yes — the Build plan tab generates a standalone HTML briefing you can download and email. Fully self-contained, no external dependencies, and it contains only the analysis, which you control. Scrub customer names from cluster labels first if the report leaves your org.</p></details>
         <details><summary>Does it replace a real capacity assessment?</summary><p>No — it's a first-pass sizing from inventory and point-in-time utilization. It can't see performance history or workload behavior, so treat outputs as the starting point for the real assessment, not the verdict.</p></details>
         <details><summary>How does licensing math work?</summary><p>Broadcom licenses vSphere per physical core with a 16-core minimum per socket: <code>license cores = sockets × max(cores per socket, 16)</code>. The tool applies this to your target host spec, rolls it up across the build, and compares against current-state cores when vHost data is present. vSAN, NSX, and Aria aren't modeled.</p></details>
@@ -271,6 +275,6 @@
 </footer>
 
 <script src="lib/xlsx.full.min.js"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 </body>
 </html>
