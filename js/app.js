@@ -256,11 +256,9 @@ function showError(msg) { const e = $('fileError'); e.hidden = false; e.innerHTM
 function clearMsgs() { $('fileError').hidden = true; $('parseStatus').hidden = true; }
 
 function setStep(n) {
-  [1, 2, 3].forEach((i) => {
-    $('stepData').hidden = i !== 1;
-    $('stepConfig').hidden = i !== 2;
-    $('stepResults').hidden = i !== 3;
-  });
+  $('stepData').hidden = n !== 1;
+  $('stepConfig').hidden = n !== 2;
+  $('stepResults').hidden = n !== 3;
   document.querySelectorAll('#stepper .step').forEach((el) => {
     const s = parseInt(el.dataset.step);
     el.classList.toggle('active', s === n);
