@@ -526,6 +526,15 @@ function refreshPreviews() {
 /* ================= Step 3: results ================= */
 function computeResults() { return APP.clusters.map((c) => ({ c, cfg: getCfg(c.id), r: sizeCluster(c, getCfg(c.id)) })); }
 
+function renderResults() {
+  APP.results = computeResults();
+  renderPlanTab(APP.results);
+  renderLicensingTab(APP.results);
+  renderFindingsTab(APP.results);
+  renderReportTab();
+  switchTab('plan');
+}
+
 function switchTab(name) {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   ['plan', 'licensing', 'findings', 'report'].forEach((t) => { $('tab-' + t).hidden = t !== name; });
