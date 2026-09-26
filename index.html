@@ -17,7 +17,6 @@
       <span class="brand-name">Server Sizer</span>
     </a>
     <nav class="nav-links">
-      <a class="cc-link" href="https://scribnetai.github.io/se-command-center/">&#8962; SE Command Center</a>
       <a href="#how">How it works</a>
       <a href="#math">Sizing math</a>
       <a href="#faq">FAQ</a>
@@ -112,6 +111,17 @@
         <details><summary>Why does it ask about overcommit instead of measuring it?</summary><p>Because safe overcommit is a judgment call that depends on workload behavior the tool can't see (CPU-ready, memory pressure, growth). It gives you the sliders with sane defaults and shows exactly how they move the host count, so the assumption is explicit instead of buried.</p></details>
         <details><summary>Does it do pricing?</summary><p>No — it produces host counts, per-host specs, and license-core counts. Your VAR quoting tooling turns that BOM into dollars.</p></details>
       </div>
+    </div>
+  </section>
+
+  <section id="changelog" class="section">
+    <div class="wrap">
+      <div class="eyebrow">History</div>
+      <h2>Changelog</h2>
+      <details class="changelog-details">
+        <summary>What changed and when.</summary>
+        <div id="changelog-body"></div>
+      </details>
     </div>
   </section>
 </main>
@@ -243,6 +253,6 @@
 </footer>
 
 <script src="lib/xlsx.full.min.js"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
