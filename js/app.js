@@ -453,7 +453,7 @@ function renderConfig() {
     }).join('');
     const cpsOpts = [8, 10, 12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 86, 96, 120, 128, 144].map((v) => '<option value="' + v + '"' + (v === cfg.cps ? ' selected' : '') + '>' + v + '</option>').join('');
     const ramOpts = [128, 256, 384, 512, 768, 1024, 1536, 2048].map((v) => '<option value="' + v + '"' + (v === cfg.ramGB ? ' selected' : '') + '>' + fmtInt(v) + ' GB</option>').join('');
-    return '<div class="ccard' + (i === 0 ? ' open' : '') + '" data-id="' + c.id + '">' +
+    return '<div class="ccard reveal' + (i === 0 ? ' open' : '') + '" data-id="' + c.id + '">' +
       '<div class="ccard-head">' +
         '<div><div class="ccard-title">' + esc(c.name) + '</div>' +
         '<div class="ccard-sub">' + fmtInt(c.vms) + ' VMs · ' + fmtInt(c.allocVCpu) + ' vCPU · ' + fmtInt(c.allocMemGB) + ' GB RAM · ' + fmtTB(c.usedStorageTB) + '</div></div>' +
@@ -466,6 +466,7 @@ function renderConfig() {
           '<div class="cfg-note">' + (hasUtil ? 'Actual = allocated × avg utilization from the export (' + Math.round(c.avgCpuUtil * 100) + '% CPU · ' + Math.round(c.avgMemUtil * 100) + '% MEM).' : 'Utilization data unavailable — allocated totals used.') + '</div></div>' +
         '<div class="cfg-field"><label>Growth headroom: <strong data-lb="growth">' + Math.round(cfg.growth * 100) + '%</strong></label>' +
           '<input type="range" data-cfg="growth" min="0" max="50" step="5" value="' + Math.round(cfg.growth * 100) + '">' +
+          rangeScale('0%', '25%', '50%') +
           '<div class="cfg-note">Usable capacity per host is derated by this much.</div></div>' +
         '<div class="cfg-field"><label>Redundancy</label>' +
           segHTML('redundancy', [['none', 'None'], ['n1', 'N+1'], ['n2', 'N+2']], cfg.redundancy) +
@@ -485,12 +486,15 @@ function renderConfig() {
           '<select data-cfg="ramGB">' + ramOpts + '</select></div>' +
         '<div class="cfg-field"><label>CPU overcommit: <strong data-lb="cpuOC">' + cfg.cpuOC.toFixed(1) + ':1</strong></label>' +
           '<input type="range" data-cfg="cpuOC" min="1" max="10" step="0.5" value="' + cfg.cpuOC + '">' +
+          rangeScale('1:1', '5.5:1', '10:1') +
           '<div class="cfg-note">vCPUs per physical core. Your judgment call.</div></div>' +
         '<div class="cfg-field"><label>Avg GHz per vCPU: <strong data-lb="ghzPerVcpu">' + (cfg.ghzPerVcpu || 0.5).toFixed(1) + '</strong></label>' +
           '<input type="range" data-cfg="ghzPerVcpu" min="0.1" max="3" step="0.1" value="' + (cfg.ghzPerVcpu || 0.5) + '">' +
+          rangeScale('0.1', '1.6', '3.0') +
           '<div class="cfg-note">Sustained clock assumed per vCPU. At 4:1 overcommit on 3.1 GHz cores each vCPU gets ~0.8 GHz — raise for clock-hungry workloads.</div></div>' +
         '<div class="cfg-field"><label>RAM overcommit: <strong data-lb="memOC">' + cfg.memOC.toFixed(2) + ':1</strong></label>' +
           '<input type="range" data-cfg="memOC" min="1" max="2" step="0.05" value="' + cfg.memOC + '">' +
+          rangeScale('1.00:1', '1.50:1', '2.00:1') +
           '<div class="cfg-note">Keep ≤1.5:1 unless you know the workload.</div></div>' +
         '<div class="cfg-field"><label>Architecture</label>' +
           segHTML('arch', [['compute', 'Compute-only'], ['hci', 'HCI']], cfg.hci ? 'hci' : 'compute') +
@@ -502,6 +506,7 @@ function renderConfig() {
           '<div class="cfg-note">Usable per host = raw ÷ replication.</div></div>' +
       '</div>' +
       '<div class="spec-line" data-pv="spec"></div>' +
+      '<div class="dim-bars"><div class="dim-bars-title">⚡ What\'s driving this build</div>' + dimBarRows() + '</div>' +
       '</div></div>';
   }).join('');
 
@@ -512,8 +517,9 @@ function renderConfig() {
       card.classList.toggle('open');
     });
     card.querySelectorAll('[data-cfg]').forEach((el) => {
-      el.addEventListener('input', () => onCfgInput(c.id, card));
-      el.addEventListener('change', () => onCfgInput(c.id, card));
+      paintSlider(el);
+      el.addEventListener('input', () => { paintSlider(el); flashPill(card, el); onCfgInput(c.id, card); });
+      el.addEventListener('change', () => { paintSlider(el); onCfgInput(c.id, card); });
     });
     card.querySelectorAll('[data-seg]').forEach((seg) => {
       seg.querySelectorAll('button:not([disabled])').forEach((b) => {
@@ -526,6 +532,7 @@ function renderConfig() {
     });
   });
   refreshPreviews();
+  observeReveals(wrap);
 }
 
 function onCfgInput(cid, card) {
@@ -585,6 +592,63 @@ function onCfgInput(cid, card) {
   queueAutosave();
 }
 
+/* ================= Physgun-style UI helpers ================= */
+function paintSlider(el) {
+  if (!el || el.type !== 'range') return;
+  const min = parseFloat(el.min || 0), max = parseFloat(el.max || 100);
+  const v = parseFloat(el.value || 0);
+  const pct = max > min ? Math.min(100, Math.max(0, (v - min) / (max - min) * 100)) : 0;
+  el.style.setProperty('--fill', pct.toFixed(1) + '%');
+}
+function rangeScale(minLbl, midLbl, maxLbl) {
+  return '<div class="range-scale"><span>' + minLbl + '</span><span>' + midLbl + '</span><span>' + maxLbl + '</span></div>';
+}
+function dimBarRow(dim, label, hidden) {
+  return '<div class="dim-bar-row" data-dimrow="' + dim + '"' + (hidden ? ' hidden' : '') + '>' +
+    '<span class="dim-lbl">' + label + '</span>' +
+    '<div class="dim-track"><div class="dim-fill ' + dim + '" data-dimf="' + dim + '"></div></div>' +
+    '<span class="dim-val" data-dimv="' + dim + '">—</span></div>';
+}
+function dimBarRows() {
+  return dimBarRow('cpu', '🖥️ CPU') + dimBarRow('ghz', '⚡ GHz') +
+    dimBarRow('ram', '🧠 RAM') + dimBarRow('sto', '💾 Storage', true);
+}
+function bindDimKey(binding) {
+  return { cpu: 'cpu', ghz: 'ghz', memory: 'ram', storage: 'sto' }[binding] || null;
+}
+function driveRows(cfg, r) {
+  const dims = [['cpu', '🖥️ CPU', r.cpuHosts], ['ghz', '⚡ GHz', r.ghzHosts], ['ram', '🧠 RAM', r.memHosts]];
+  if (cfg.hci) dims.push(['sto', '💾 Storage', r.stoHosts]);
+  const maxD = Math.max(1, ...dims.map((d) => d[2]));
+  const hot = bindDimKey(r.binding);
+  return dims.map(([d, lbl, n]) =>
+    '<div class="dim-bar-row' + (hot === d ? ' hot' : '') + '"><span class="dim-lbl">' + lbl + '</span>' +
+    '<div class="dim-track"><div class="dim-fill ' + d + '" style="width:' + (n / maxD * 100).toFixed(1) + '%"></div></div>' +
+    '<span class="dim-val">' + n + (n === 1 ? ' host' : ' hosts') + '</span></div>').join('');
+}
+/* Scroll-reveal: fade/slide sections in as they enter the viewport. */
+let revealIO = null;
+function initReveals() {
+  if (typeof IntersectionObserver === 'undefined' || typeof document === 'undefined') return;
+  revealIO = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealIO.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  observeReveals(document);
+}
+function observeReveals(root) {
+  if (!revealIO || !root || !root.querySelectorAll) return;
+  root.querySelectorAll('.reveal:not(.in)').forEach((el) => revealIO.observe(el));
+}
+
+function flashPill(card, el) {
+  const pill = el.closest('.cfg-field') && el.closest('.cfg-field').querySelector('[data-lb]');
+  if (!pill) return;
+  pill.classList.remove('upd');
+  void pill.offsetWidth; /* restart the animation */
+  pill.classList.add('upd');
+  setTimeout(() => pill.classList.remove('upd'), 450);
+}
+
 function refreshPreviews() {
   APP.clusters.forEach((c) => {
     const card = document.querySelector('.ccard[data-id="' + c.id + '"]');
@@ -601,6 +665,19 @@ function refreshPreviews() {
     const bLabel = { cpu: 'CPU-bound', ghz: 'GHz-bound', memory: 'memory-bound', storage: 'storage-bound', balanced: 'balanced' }[r.binding];
     const bColor = r.binding === 'balanced' ? 'var(--green)' : 'var(--amber)';
     set('binding', '<span style="color:' + bColor + '">●</span> ' + bLabel + ' · ' + (cfg.redundancy === 'n1' ? 'N+1' : cfg.redundancy === 'n2' ? 'N+2' : 'no spares'));
+    const dims = [['cpu', r.cpuHosts], ['ghz', r.ghzHosts], ['ram', r.memHosts], ['sto', cfg.hci ? r.stoHosts : 0]];
+    const maxD = Math.max(1, r.cpuHosts, r.ghzHosts, r.memHosts, cfg.hci ? r.stoHosts : 0);
+    const hot = bindDimKey(r.binding);
+    dims.forEach(([d, n]) => {
+      const row = card.querySelector('[data-dimrow="' + d + '"]');
+      if (!row) return;
+      row.hidden = (d === 'sto' && !cfg.hci);
+      const fill = row.querySelector('[data-dimf]');
+      if (fill) fill.style.width = (n / maxD * 100).toFixed(1) + '%';
+      const val = row.querySelector('[data-dimv]');
+      if (val) val.textContent = n + (n === 1 ? ' host' : ' hosts');
+      row.classList.toggle('hot', hot === d);
+    });
     set('spec', '<strong>Target:</strong> ' + esc(cfg.platform) + ' — ' + r.hostLabel +
       ' · ' + cfg.cpuOC.toFixed(1) + ':1 CPU / ' + cfg.memOC.toFixed(2) + ':1 MEM overcommit' +
       (cfg.hci ? ' · HCI ' + fmt1(cfg.storageTB) + ' TB raw/host' : '') +
@@ -618,6 +695,7 @@ function renderResults() {
   renderFindingsTab(APP.results);
   renderReportTab();
   switchTab('plan');
+  observeReveals($('stepResults'));
 }
 
 function switchTab(name) {
@@ -659,7 +737,8 @@ function renderPlanTab(res) {
     steps += mathStep(++n, '<strong>' + r.finalHosts + ' hosts × ' + r.hostLabel + '</strong>', '<strong>' + fmtInt(r.totalLic) + ' license cores</strong>', true);
     return '<div class="panel"><h3>' + (idx + 1) + '. ' + esc(c.name) +
       ' <span class="sub">' + fmtInt(c.vms) + ' VMs · ' + esc(cfg.platform) + '</span></h3>' + steps +
-      '<p class="note">Effective capacity at build: ' + Math.round(r.capCpuUsed * 100) + '% of CPU, ' + Math.round(r.capGhzUsed * 100) + '% of GHz, and ' + Math.round(r.capMemUsed * 100) + '% of RAM committed on day one (before growth).</p></div>';
+      '<p class="note">Effective capacity at build: ' + Math.round(r.capCpuUsed * 100) + '% of CPU, ' + Math.round(r.capGhzUsed * 100) + '% of GHz, and ' + Math.round(r.capMemUsed * 100) + '% of RAM committed on day one (before growth).</p>' +
+      '<div class="dim-bars"><div class="dim-bars-title">⚡ What\'s driving this build</div>' + driveRows(cfg, r) + '</div></div>';
   }).join('');
 
   $('tab-plan').innerHTML =
@@ -1065,6 +1144,7 @@ function wireApp() {
   $('dlReportBtn').onclick = downloadReport;
   $('clearBtn').onclick = clearSession;
   renderChangelog();
+  initReveals();
 }
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', wireApp);
