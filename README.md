@@ -24,9 +24,15 @@ points, and a customer-ready HTML report.
 
 ```
 cpu hosts = ceil( demand vCPU ÷ (host cores × cpu overcommit × (1 − growth)) )
+ghz hosts = ceil( demand vCPU × ghz/vCPU ÷ (host cores × base clock × (1 − growth)) )
 mem hosts = ceil( demand vRAM ÷ (host RAM × ram overcommit × (1 − growth)) )
-build     = max(cpu hosts, mem hosts, storage hosts) + redundancy spares
+build     = max(cpu hosts, ghz hosts, mem hosts, storage hosts) + redundancy spares
 ```
+
+Target CPUs are real Intel Xeon 6 SKUs (base clock used for sizing; turbo
+ignored). The GHz dimension checks assumed sustained clock per vCPU
+(tunable, default 0.5) against physical host clocks — no overcommit on the
+host side, since overcommit is already expressed in the vCPU ratio.
 
 Demand basis is **allocated** resources or **actual utilization** (from the
 export's host utilization figures). Licensing follows Broadcom's per-core
