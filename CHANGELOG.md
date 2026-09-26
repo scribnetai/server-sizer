@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-26
+- Added six more CPUs to the picker: the low-core ROBO tier (6507P 8c @ 3.5 GHz, 6505P 12c @ 2.2, 6517P 16c @ 3.2, 6520P 24c @ 2.4), the new 12-core 6377P entry part (3.1 GHz, 95W), and the 64-core 6710E (2.4 GHz) for smaller efficiency plays. Catalog is now 17 named Xeon SKUs plus Custom.
 - Added GHz as a fourth sizing dimension alongside vCPU, RAM, and HCI storage — demand assumes a tunable sustained GHz per vCPU (default 0.5), checked against physical host clocks (cores × base clock, no overcommit). A new "GHz-bound" binding constraint calls out when clock demand sets the host count.
 - Added Intel Xeon 6 CPU picker to the per-cluster config: 11 real SKUs (6900P/6700P/6500P P-cores plus the 144-core 6780E) with published base clocks; platform presets now ship with sensible default CPUs. Editing cores or clock flips the CPU to Custom.
 - Build plan now shows per-host and total GHz, GHz worked-math steps, GHz in the downloadable report, and a GHz-bound SE finding.
