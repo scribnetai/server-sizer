@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-26
+- Added 💾 Projects: named saves in this browser, portable JSON export/import, and automatic session restore (your last session reloads on revisit). Saves capture clusters, per-cluster configs, and tuning — nothing uploaded.
 - Launched Server Sizer v1: three-step VMware refresh sizing wizard — load demand, configure each cluster, build plan.
 - Load demand from an RVTools .xlsx export, manual cluster entry, or one-click demo data.
 - Per-cluster config cards: platform presets (Dell R760, Cisco UCS C240 M7, HPE DL380 Gen11, Nutanix NX-8155N, Supermicro, Custom), growth headroom, CPU/RAM overcommit, N+1/N+2, compute vs HCI storage — live host-count previews with binding-constraint callouts.
