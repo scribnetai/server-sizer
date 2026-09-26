@@ -195,7 +195,13 @@ const CPUS = {
   'Xeon 6737P': { cores: 32, ghz: 2.9, family: 'Xeon 6 6700P' },
   'Xeon 6730P': { cores: 32, ghz: 2.5, family: 'Xeon 6 6700P' },
   'Xeon 6527P': { cores: 24, ghz: 3.0, family: 'Xeon 6 6500P' },
+  'Xeon 6520P': { cores: 24, ghz: 2.4, family: 'Xeon 6 6500P' },
+  'Xeon 6517P': { cores: 16, ghz: 3.2, family: 'Xeon 6 6500P' },
+  'Xeon 6505P': { cores: 12, ghz: 2.2, family: 'Xeon 6 6500P' },
+  'Xeon 6507P': { cores: 8, ghz: 3.5, family: 'Xeon 6 6500P' },
+  'Xeon 6377P': { cores: 12, ghz: 3.1, family: 'Xeon 6300 entry' },
   'Xeon 6780E': { cores: 144, ghz: 2.2, family: 'Xeon 6 6700E' },
+  'Xeon 6710E': { cores: 64, ghz: 2.4, family: 'Xeon 6 6700E' },
   'Custom': null,
 };
 const PLATFORMS = {
