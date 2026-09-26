@@ -184,12 +184,26 @@ function genDemoClusters() {
 }
 
 /* ================= Sizing math ================= */
+const CPUS = {
+  'Xeon 6980P': { cores: 128, ghz: 2.0, family: 'Xeon 6 6900P' },
+  'Xeon 6972P': { cores: 96, ghz: 2.4, family: 'Xeon 6 6900P' },
+  'Xeon 6960P': { cores: 72, ghz: 2.7, family: 'Xeon 6 6900P' },
+  'Xeon 6787P': { cores: 86, ghz: 2.0, family: 'Xeon 6 6700P' },
+  'Xeon 6767P': { cores: 64, ghz: 2.4, family: 'Xeon 6 6700P' },
+  'Xeon 6747P': { cores: 48, ghz: 2.7, family: 'Xeon 6 6700P' },
+  'Xeon 6745P': { cores: 32, ghz: 3.1, family: 'Xeon 6 6700P' },
+  'Xeon 6737P': { cores: 32, ghz: 2.9, family: 'Xeon 6 6700P' },
+  'Xeon 6730P': { cores: 32, ghz: 2.5, family: 'Xeon 6 6700P' },
+  'Xeon 6527P': { cores: 24, ghz: 3.0, family: 'Xeon 6 6500P' },
+  'Xeon 6780E': { cores: 144, ghz: 2.2, family: 'Xeon 6 6700E' },
+  'Custom': null,
+};
 const PLATFORMS = {
-  'Dell PowerEdge R760': { sockets: 2, cps: 32, ramGB: 1024 },
-  'Cisco UCS C240 M7': { sockets: 2, cps: 32, ramGB: 1024 },
-  'HPE ProLiant DL380 Gen11': { sockets: 2, cps: 24, ramGB: 768 },
-  'Nutanix NX-8155N': { sockets: 2, cps: 32, ramGB: 1024 },
-  'Supermicro Hyper (value)': { sockets: 2, cps: 32, ramGB: 512 },
+  'Dell PowerEdge R760': { sockets: 2, cpu: 'Xeon 6745P', ramGB: 1024 },
+  'Cisco UCS C240 M7': { sockets: 2, cpu: 'Xeon 6745P', ramGB: 1024 },
+  'HPE ProLiant DL380 Gen11': { sockets: 2, cpu: 'Xeon 6527P', ramGB: 768 },
+  'Nutanix NX-8155N': { sockets: 2, cpu: 'Xeon 6745P', ramGB: 1024 },
+  'Supermicro Hyper (value)': { sockets: 2, cpu: 'Xeon 6730P', ramGB: 512 },
   'Custom': null,
 };
 const STORAGE_REPL = { 'mirror': { label: 'FTT=1 mirror (2×)', factor: 2.0 }, 'raid5': { label: 'FTT=1 RAID-5/6 (1.33×)', factor: 1.33 } };
@@ -198,6 +212,7 @@ function defaultCfg() {
   return {
     basis: 'allocated', growth: 0.20, redundancy: 'n1',
     platform: 'Dell PowerEdge R760', sockets: 2, cps: 32, ramGB: 1024,
+    cpu: 'Xeon 6745P', ghz: 3.1, ghzPerVcpu: 0.5,
     cpuOC: 4, memOC: 1.25, hci: false, storageTB: 15, storageRepl: 'mirror',
   };
 }
@@ -215,6 +230,13 @@ function sizeCluster(cluster, cfg) {
   const cpuHosts = Math.max(1, Math.ceil(demandVCpu / (perHostVCpu * eff)));
   const memHosts = Math.max(1, Math.ceil(demandMemGB / (perHostMemGB * eff)));
 
+  // GHz dimension: sustained clock demand vs physical clocks per host.
+  // No overcommit on the host side — overcommit is already expressed in the
+  // vCPU ratio; this checks whether the assumed GHz/vCPU fits the silicon.
+  const demandGHz = demandVCpu * (cfg.ghzPerVcpu || 0.5);
+  const perHostGHz = cfg.sockets * cfg.cps * (cfg.ghz || 2.5);
+  const ghzHosts = Math.max(1, Math.ceil(demandGHz / (perHostGHz * eff)));
+
   let stoHosts = 0, perHostUsableTB = 0;
   if (cfg.hci) {
     const repl = STORAGE_REPL[cfg.storageRepl] ? STORAGE_REPL[cfg.storageRepl].factor : 2.0;
@@ -222,8 +244,9 @@ function sizeCluster(cluster, cfg) {
     stoHosts = demandStoTB > 0 ? Math.max(1, Math.ceil(demandStoTB / (perHostUsableTB * eff))) : 1;
   }
 
-  const rawHosts = Math.max(cpuHosts, memHosts, stoHosts, 1);
+  const rawHosts = Math.max(cpuHosts, ghzHosts, memHosts, stoHosts, 1);
   const binding = rawHosts === stoHosts && cfg.hci ? 'storage'
+    : rawHosts === ghzHosts && rawHosts !== cpuHosts && rawHosts !== memHosts ? 'ghz'
     : rawHosts === memHosts && rawHosts !== cpuHosts ? 'memory'
     : rawHosts === cpuHosts && rawHosts !== memHosts ? 'cpu' : 'balanced';
   const spares = cfg.redundancy === 'n1' ? 1 : cfg.redundancy === 'n2' ? 2 : 0;
@@ -237,14 +260,16 @@ function sizeCluster(cluster, cfg) {
 
   const capCpuUsed = demandVCpu / (finalHosts * perHostVCpu);
   const capMemUsed = demandMemGB / (finalHosts * perHostMemGB);
+  const capGhzUsed = demandGHz / (finalHosts * perHostGHz);
 
   return {
     useActual, demandVCpu, demandMemGB, demandStoTB, eff,
     perHostVCpu, perHostMemGB, perHostUsableTB,
+    demandGHz, perHostGHz, ghzHosts,
     cpuHosts, memHosts, stoHosts, rawHosts, binding, spares, finalHosts,
     licPerHost, phantomPerHost, totalLic, totalPhantom, totalPhysCores,
-    capCpuUsed, capMemUsed,
-    hostLabel: cfg.sockets + '× ' + cfg.cps + 'c · ' + fmtInt(cfg.ramGB) + ' GB',
+    capCpuUsed, capMemUsed, capGhzUsed,
+    hostLabel: cfg.sockets + '×' + cfg.cps + 'c ' + (cfg.cpu || 'Custom') + ' @ ' + (cfg.ghz || 2.5).toFixed(1) + 'GHz · ' + fmtInt(cfg.ramGB) + ' GB',
   };
 }
 
@@ -386,7 +411,22 @@ function renderInventory() {
 }
 
 /* ================= Step 2: per-cluster configuration ================= */
-function getCfg(id) { if (!APP.cfgs[id]) APP.cfgs[id] = defaultCfg(); return APP.cfgs[id]; }
+function getCfg(id) {
+  if (!APP.cfgs[id]) APP.cfgs[id] = defaultCfg();
+  const cfg = APP.cfgs[id];
+  // Migrate projects saved before the GHz/CPU-model update.
+  if (cfg.cpu == null) {
+    const p = PLATFORMS[cfg.platform];
+    if (p && p.cpu && CPUS[p.cpu] && cfg.cps === CPUS[p.cpu].cores) {
+      cfg.cpu = p.cpu; cfg.ghz = CPUS[p.cpu].ghz;
+    } else {
+      cfg.cpu = 'Custom';
+      if (cfg.ghz == null) cfg.ghz = 2.5;
+    }
+  }
+  if (cfg.ghzPerVcpu == null) cfg.ghzPerVcpu = 0.5;
+  return cfg;
+}
 
 function segHTML(seg, opts, cur) {
   return '<div class="seg" data-seg="' + seg + '">' + opts.map((o) =>
@@ -400,7 +440,12 @@ function renderConfig() {
     const cfg = getCfg(c.id);
     const hasUtil = c.avgCpuUtil != null;
     const platOpts = Object.keys(PLATFORMS).map((p) => '<option' + (p === cfg.platform ? ' selected' : '') + '>' + esc(p) + '</option>').join('');
-    const cpsOpts = [8, 10, 12, 16, 20, 24, 28, 32, 40, 48, 56, 64].map((v) => '<option value="' + v + '"' + (v === cfg.cps ? ' selected' : '') + '>' + v + '</option>').join('');
+    const cpuOpts = Object.keys(CPUS).map((k) => {
+      const d = CPUS[k];
+      const lbl = d ? k + ' — ' + d.cores + 'c @ ' + d.ghz.toFixed(1) + ' GHz' : k;
+      return '<option value="' + esc(k) + '"' + (k === cfg.cpu ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+    }).join('');
+    const cpsOpts = [8, 10, 12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 86, 96, 120, 128, 144].map((v) => '<option value="' + v + '"' + (v === cfg.cps ? ' selected' : '') + '>' + v + '</option>').join('');
     const ramOpts = [128, 256, 384, 512, 768, 1024, 1536, 2048].map((v) => '<option value="' + v + '"' + (v === cfg.ramGB ? ' selected' : '') + '>' + fmtInt(v) + ' GB</option>').join('');
     return '<div class="ccard' + (i === 0 ? ' open' : '') + '" data-id="' + c.id + '">' +
       '<div class="ccard-head">' +
@@ -421,16 +466,23 @@ function renderConfig() {
           '<div class="cfg-note">Spare hosts for failure + maintenance.</div></div>' +
         '<div class="cfg-field"><label>Platform preset</label>' +
           '<select data-cfg="platform">' + platOpts + '</select>' +
-          '<div class="cfg-note">Presets fill sockets / cores / RAM — tune freely after.</div></div>' +
-        '<div class="cfg-field"><label>Sockets / cores per socket</label><div class="cfg-row">' +
+          '<div class="cfg-note">Presets fill sockets / CPU / RAM — tune freely after.</div></div>' +
+        '<div class="cfg-field"><label>CPU model</label>' +
+          '<select data-cfg="cpu">' + cpuOpts + '</select>' +
+          '<div class="cfg-note">Current Intel Xeon 6 line — base clock is used for sizing (turbo ignored).</div></div>' +
+        '<div class="cfg-field"><label>Sockets / cores / base clock (GHz)</label><div class="cfg-row">' +
           '<select data-cfg="sockets">' + [1, 2, 4].map((v) => '<option value="' + v + '"' + (v === cfg.sockets ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>' +
-          '<select data-cfg="cps">' + cpsOpts + '</select></div>' +
-          '<div class="cfg-note">vSphere bills max(cores/socket, 16) per socket.</div></div>' +
+          '<select data-cfg="cps">' + cpsOpts + '</select>' +
+          '<input type="number" data-cfg="ghz" min="1" max="5" step="0.1" value="' + (cfg.ghz || 2.5).toFixed(1) + '" title="Base clock in GHz"></div>' +
+          '<div class="cfg-note">Editing cores or clock flips the CPU to Custom. vSphere bills max(cores/socket, 16).</div></div>' +
         '<div class="cfg-field"><label>RAM per host</label>' +
           '<select data-cfg="ramGB">' + ramOpts + '</select></div>' +
         '<div class="cfg-field"><label>CPU overcommit: <strong data-lb="cpuOC">' + cfg.cpuOC.toFixed(1) + ':1</strong></label>' +
           '<input type="range" data-cfg="cpuOC" min="1" max="10" step="0.5" value="' + cfg.cpuOC + '">' +
           '<div class="cfg-note">vCPUs per physical core. Your judgment call.</div></div>' +
+        '<div class="cfg-field"><label>Avg GHz per vCPU: <strong data-lb="ghzPerVcpu">' + (cfg.ghzPerVcpu || 0.5).toFixed(1) + '</strong></label>' +
+          '<input type="range" data-cfg="ghzPerVcpu" min="0.1" max="3" step="0.1" value="' + (cfg.ghzPerVcpu || 0.5) + '">' +
+          '<div class="cfg-note">Sustained clock assumed per vCPU. At 4:1 overcommit on 3.1 GHz cores each vCPU gets ~0.8 GHz — raise for clock-hungry workloads.</div></div>' +
         '<div class="cfg-field"><label>RAM overcommit: <strong data-lb="memOC">' + cfg.memOC.toFixed(2) + ':1</strong></label>' +
           '<input type="range" data-cfg="memOC" min="1" max="2" step="0.05" value="' + cfg.memOC + '">' +
           '<div class="cfg-note">Keep ≤1.5:1 unless you know the workload.</div></div>' +
@@ -481,19 +533,41 @@ function onCfgInput(cid, card) {
   if (plat && plat !== cfg.platform) {
     cfg.platform = plat;
     const p = PLATFORMS[plat];
-    if (p) {
-      cfg.sockets = p.sockets; cfg.cps = p.cps; cfg.ramGB = p.ramGB;
+    if (p && CPUS[p.cpu]) {
+      const d = CPUS[p.cpu];
+      cfg.sockets = p.sockets; cfg.cpu = p.cpu; cfg.cps = d.cores; cfg.ghz = d.ghz; cfg.ramGB = p.ramGB;
       card.querySelector('[data-cfg="sockets"]').value = p.sockets;
-      card.querySelector('[data-cfg="cps"]').value = p.cps;
+      card.querySelector('[data-cfg="cpu"]').value = p.cpu;
+      card.querySelector('[data-cfg="cps"]').value = d.cores;
+      card.querySelector('[data-cfg="ghz"]').value = d.ghz.toFixed(1);
       card.querySelector('[data-cfg="ramGB"]').value = p.ramGB;
     } else { cfg.platform = 'Custom'; }
   }
+  const cpuSel = val('cpu');
+  if (cpuSel && cpuSel !== cfg.cpu) {
+    cfg.cpu = cpuSel;
+    const d = CPUS[cpuSel];
+    if (d) {
+      cfg.cps = d.cores; cfg.ghz = d.ghz;
+      card.querySelector('[data-cfg="cps"]').value = d.cores;
+      card.querySelector('[data-cfg="ghz"]').value = d.ghz.toFixed(1);
+    }
+  }
   cfg.sockets = parseInt(val('sockets')) || 2;
   cfg.cps = parseInt(val('cps')) || 32;
+  cfg.ghz = parseFloat(val('ghz')) || 2.5;
+  if (cfg.cpu !== 'Custom' && CPUS[cfg.cpu]) {
+    const d = CPUS[cfg.cpu];
+    if (d.cores !== cfg.cps || Math.abs(d.ghz - cfg.ghz) > 0.001) {
+      cfg.cpu = 'Custom';
+      card.querySelector('[data-cfg="cpu"]').value = 'Custom';
+    }
+  }
+  cfg.ghzPerVcpu = parseFloat(val('ghzPerVcpu')) || 0.5;
   cfg.ramGB = parseNum(val('ramGB')) || 1024;
   if (val('platform') !== 'Custom' && PLATFORMS[val('platform')]) {
     const p = PLATFORMS[val('platform')];
-    if (p.sockets !== cfg.sockets || p.cps !== cfg.cps || p.ramGB !== cfg.ramGB) { cfg.platform = 'Custom'; card.querySelector('[data-cfg="platform"]').value = 'Custom'; }
+    if (p.sockets !== cfg.sockets || p.cpu !== cfg.cpu || p.ramGB !== cfg.ramGB) { cfg.platform = 'Custom'; card.querySelector('[data-cfg="platform"]').value = 'Custom'; }
   }
   cfg.cpuOC = parseFloat(val('cpuOC')) || 4;
   cfg.memOC = parseFloat(val('memOC')) || 1.25;
@@ -516,8 +590,9 @@ function refreshPreviews() {
     lbl('growth', Math.round(cfg.growth * 100) + '%');
     lbl('cpuOC', cfg.cpuOC.toFixed(1) + ':1');
     lbl('memOC', cfg.memOC.toFixed(2) + ':1');
+    lbl('ghzPerVcpu', (cfg.ghzPerVcpu || 0.5).toFixed(1));
     set('hosts', r.finalHosts);
-    const bLabel = { cpu: 'CPU-bound', memory: 'memory-bound', storage: 'storage-bound', balanced: 'balanced' }[r.binding];
+    const bLabel = { cpu: 'CPU-bound', ghz: 'GHz-bound', memory: 'memory-bound', storage: 'storage-bound', balanced: 'balanced' }[r.binding];
     const bColor = r.binding === 'balanced' ? 'var(--green)' : 'var(--amber)';
     set('binding', '<span style="color:' + bColor + '">●</span> ' + bLabel + ' · ' + (cfg.redundancy === 'n1' ? 'N+1' : cfg.redundancy === 'n2' ? 'N+2' : 'no spares'));
     set('spec', '<strong>Target:</strong> ' + esc(cfg.platform) + ' — ' + r.hostLabel +
@@ -553,6 +628,7 @@ function renderPlanTab(res) {
   const totHosts = res.reduce((a, x) => a + x.r.finalHosts, 0);
   const totLic = res.reduce((a, x) => a + x.r.totalLic, 0);
   const totPhys = res.reduce((a, x) => a + x.r.totalPhysCores, 0);
+  const totGHz = res.reduce((a, x) => a + x.r.finalHosts * x.r.perHostGHz, 0);
   const bom = res.map(({ c, cfg, r }) =>
     '<tr><td><strong>' + esc(c.name) + '</strong></td><td>' + esc(cfg.platform) + '</td>' +
     '<td>' + r.hostLabel + '</td><td class="num">' + r.finalHosts + '</td>' +
@@ -565,16 +641,19 @@ function renderPlanTab(res) {
     steps += mathStep(++n, 'growth derate = 1 − ' + Math.round(cfg.growth * 100) + '%', '× ' + r.eff.toFixed(2));
     steps += mathStep(++n, 'per-host CPU = ' + cfg.sockets + ' × ' + cfg.cps + ' × ' + cfg.cpuOC.toFixed(1) + ' × ' + r.eff.toFixed(2), fmt1(r.perHostVCpu * r.eff) + ' vCPU');
     steps += mathStep(++n, 'per-host RAM = ' + fmtInt(cfg.ramGB) + ' × ' + cfg.memOC.toFixed(2) + ' × ' + r.eff.toFixed(2), fmtInt(r.perHostMemGB * r.eff) + ' GB');
+    steps += mathStep(++n, 'per-host GHz = ' + cfg.sockets + ' × ' + cfg.cps + ' × ' + (cfg.ghz || 2.5).toFixed(1) + ' × ' + r.eff.toFixed(2), fmt1(r.perHostGHz * r.eff) + ' GHz');
     steps += mathStep(++n, 'cpu hosts = ceil(' + fmtInt(r.demandVCpu) + ' ÷ ' + fmt1(r.perHostVCpu * r.eff) + ')', r.cpuHosts);
     steps += mathStep(++n, 'mem hosts = ceil(' + fmtInt(r.demandMemGB) + ' ÷ ' + fmtInt(r.perHostMemGB * r.eff) + ')', r.memHosts);
+    steps += mathStep(++n, 'GHz demand = ' + fmtInt(r.demandVCpu) + ' vCPU × ' + (cfg.ghzPerVcpu || 0.5).toFixed(1) + ' GHz/vCPU', fmt1(r.demandGHz) + ' GHz');
+    steps += mathStep(++n, 'GHz hosts = ceil(' + fmt1(r.demandGHz) + ' ÷ ' + fmt1(r.perHostGHz * r.eff) + ')', r.ghzHosts);
     if (cfg.hci) steps += mathStep(++n, 'storage hosts = ceil(' + fmtTB(r.demandStoTB) + ' ÷ (' + fmt1(cfg.storageTB) + ' ÷ ' + (STORAGE_REPL[cfg.storageRepl] ? STORAGE_REPL[cfg.storageRepl].factor : 2) + ' × ' + r.eff.toFixed(2) + '))', r.stoHosts);
-    const bLabel = { cpu: 'CPU', memory: 'MEMORY', storage: 'STORAGE', balanced: 'BALANCED' }[r.binding];
+    const bLabel = { cpu: 'CPU', ghz: 'GHZ', memory: 'MEMORY', storage: 'STORAGE', balanced: 'BALANCED' }[r.binding];
     steps += mathStep(++n, 'binding constraint', '<span style="color:' + (r.binding === 'balanced' ? 'var(--green)' : 'var(--amber)') + '">' + bLabel + '</span>');
     steps += mathStep(++n, 'redundancy (' + (cfg.redundancy === 'n1' ? 'N+1' : cfg.redundancy === 'n2' ? 'N+2' : 'none') + ')', '+' + r.spares + ' spare' + (r.spares === 1 ? '' : 's'));
     steps += mathStep(++n, '<strong>' + r.finalHosts + ' hosts × ' + r.hostLabel + '</strong>', '<strong>' + fmtInt(r.totalLic) + ' license cores</strong>', true);
     return '<div class="panel"><h3>' + (idx + 1) + '. ' + esc(c.name) +
       ' <span class="sub">' + fmtInt(c.vms) + ' VMs · ' + esc(cfg.platform) + '</span></h3>' + steps +
-      '<p class="note">Effective capacity at build: ' + Math.round(r.capCpuUsed * 100) + '% of CPU and ' + Math.round(r.capMemUsed * 100) + '% of RAM committed on day one (before growth).</p></div>';
+      '<p class="note">Effective capacity at build: ' + Math.round(r.capCpuUsed * 100) + '% of CPU, ' + Math.round(r.capGhzUsed * 100) + '% of GHz, and ' + Math.round(r.capMemUsed * 100) + '% of RAM committed on day one (before growth).</p></div>';
   }).join('');
 
   $('tab-plan').innerHTML =
@@ -582,6 +661,7 @@ function renderPlanTab(res) {
     '<div class="stat"><div class="v blue">' + totHosts + '</div><div class="l">New hosts (total)</div></div>' +
     '<div class="stat"><div class="v purple">' + fmtInt(totLic) + '</div><div class="l">vSphere license cores</div></div>' +
     '<div class="stat"><div class="v">' + fmtInt(totPhys) + '</div><div class="l">Physical cores</div></div>' +
+    '<div class="stat"><div class="v">' + fmtInt(totGHz) + '</div><div class="l">Total GHz</div></div>' +
     '<div class="stat"><div class="v green">' + res.length + '</div><div class="l">Clusters sized</div></div></div>' +
     '<div class="panel"><h3>Bill of materials</h3><div class="table-scroll"><table class="data">' +
     '<thead><tr><th>Cluster</th><th>Platform</th><th>Host spec</th><th class="num">Hosts</th><th class="num">License cores</th></tr></thead>' +
@@ -627,6 +707,7 @@ function buildFindings(res) {
   res.forEach(({ c, cfg, r }) => {
     if (r.binding === 'memory') F.push({ sev: 'warn', icon: '🧠', title: esc(c.name) + ' is memory-bound', body: 'RAM demand drives this build: ' + r.memHosts + ' hosts for memory vs ' + r.cpuHosts + ' for CPU. Before adding boxes, price more RAM per host — every extra host also drags in ' + r.licPerHost + ' license cores.' });
     else if (r.binding === 'cpu') F.push({ sev: 'info', icon: '⚙️', title: esc(c.name) + ' is CPU-bound', body: 'vCPU demand sets the host count (' + r.cpuHosts + ' vs ' + r.memHosts + ' for RAM). Denser CPUs or a higher CPU overcommit are the levers here.' });
+    else if (r.binding === 'ghz') F.push({ sev: 'warn', icon: '⏱️', title: esc(c.name) + ' is GHz-bound', body: 'Clock demand (' + fmt1(r.demandGHz) + ' GHz at ' + (cfg.ghzPerVcpu || 0.5).toFixed(1) + ' GHz/vCPU) sets the host count, not vCPU count — the ' + cfg.cpuOC.toFixed(1) + ':1 overcommit promises more sustained clock per vCPU than ' + (cfg.ghz || 2.5).toFixed(1) + ' GHz cores deliver. Lower the overcommit, pick a higher-clock SKU, or revisit the GHz/vCPU assumption.' });
     else if (r.binding === 'storage') F.push({ sev: 'warn', icon: '💾', title: esc(c.name) + ' is storage-bound (HCI)', body: 'Storage demand needs ' + r.stoHosts + ' hosts but compute only needs ' + Math.max(r.cpuHosts, r.memHosts) + '. Consider fatter storage per host or RAID-5/6 resilience before adding nodes.' });
     else F.push({ sev: 'info', icon: '⚖️', title: esc(c.name) + ' is balanced', body: 'CPU and RAM land on the same host count (' + r.rawHosts + ') — the spec is well matched to the workload mix.' });
     if (r.phantomPerHost > 0) F.push({ sev: 'warn', icon: '👻', title: 'Phantom cores in the ' + esc(c.name) + ' build', body: 'Sub-16-core CPUs bill ' + r.licPerHost + ' cores/host while the silicon only has ' + (cfg.sockets * cfg.cps) + '. That is ' + r.phantomPerHost + ' phantom cores per host — ' + fmtInt(r.totalPhantom) + ' across the build — deleted free by stepping up to ≥16-core CPUs.' });
@@ -687,11 +768,13 @@ function buildReportHTML(res) {
       ['Growth headroom', Math.round(cfg.growth * 100) + '% → derate ×' + r.eff.toFixed(2)],
       ['Per-host usable CPU', fmt1(r.perHostVCpu * r.eff) + ' vCPU (' + cfg.sockets + '×' + cfg.cps + ' × ' + cfg.cpuOC.toFixed(1) + ':1)'],
       ['Per-host usable RAM', fmtInt(r.perHostMemGB * r.eff) + ' GB (' + fmtInt(cfg.ramGB) + ' GB × ' + cfg.memOC.toFixed(2) + ':1)'],
+      ['Per-host usable GHz', fmt1(r.perHostGHz * r.eff) + ' GHz (' + cfg.sockets + '×' + cfg.cps + ' × ' + (cfg.ghz || 2.5).toFixed(1) + ' GHz)'],
       ['CPU hosts', 'ceil(' + fmtInt(r.demandVCpu) + ' ÷ ' + fmt1(r.perHostVCpu * r.eff) + ') = ' + r.cpuHosts],
       ['Memory hosts', 'ceil(' + fmtInt(r.demandMemGB) + ' ÷ ' + fmtInt(r.perHostMemGB * r.eff) + ') = ' + r.memHosts],
+      ['GHz hosts', 'ceil(' + fmt1(r.demandGHz) + ' ÷ ' + fmt1(r.perHostGHz * r.eff) + ') = ' + r.ghzHosts + ' (' + (cfg.ghzPerVcpu || 0.5).toFixed(1) + ' GHz/vCPU assumed)'],
     ];
     if (cfg.hci) rows.push(['Storage hosts (HCI)', 'ceil(' + fmtTB(r.demandStoTB) + ' ÷ usable/host) = ' + r.stoHosts]);
-    rows.push(['Binding constraint', { cpu: 'CPU', memory: 'MEMORY', storage: 'STORAGE', balanced: 'BALANCED' }[r.binding]]);
+    rows.push(['Binding constraint', { cpu: 'CPU', ghz: 'GHZ', memory: 'MEMORY', storage: 'STORAGE', balanced: 'BALANCED' }[r.binding]]);
     rows.push(['Redundancy', (cfg.redundancy === 'n1' ? 'N+1' : cfg.redundancy === 'n2' ? 'N+2' : 'None') + ' → +' + r.spares + ' spare(s)']);
     rows.push(['<strong>Build</strong>', '<strong>' + r.finalHosts + ' hosts × ' + r.hostLabel + ' — ' + fmtInt(r.totalLic) + ' license cores</strong>']);
     return '<h3>' + (idx + 1) + '. ' + esc(c.name) + ' <span style="color:#5b6572;font-weight:400;font-size:.85rem">· ' + fmtInt(c.vms) + ' VMs · ' + esc(cfg.platform) + '</span></h3>' +
@@ -712,7 +795,7 @@ function buildReportHTML(res) {
     '<h2>3. Licensing</h2><table><thead><tr><th>Cluster</th><th class="num">Cores today</th><th class="num">Cores new</th><th class="num">Phantom</th></tr></thead><tbody>' + licRows + '</tbody></table>' +
     '<p style="color:#5b6572;font-size:.9rem">vSphere per-core subscription: each socket bills <span class="mono">max(cores per socket, 16)</span>. Sub-16-core CPUs create phantom cores — licenses paid for silicon that does not exist.</p>' +
     '<h2>4. Findings</h2>' + findings +
-    '<h2>5. Methodology</h2><p style="color:#5b6572;font-size:.9rem">Demand per cluster from allocated resources (or allocated × average utilization when export data is present). Host count = ceil(demand ÷ (per-host capacity × overcommit × (1 − growth))) per resource, taking the maximum across CPU, memory, and HCI storage, plus N+1/N+2 spares. This is capacity sizing, not performance sizing: it does not model IOPS, latency, or NUMA effects. Utilization figures are point-in-time. Overcommit ratios are planner assumptions, not measurements.</p>' +
+    '<h2>5. Methodology</h2><p style="color:#5b6572;font-size:.9rem">Demand per cluster from allocated resources (or allocated × average utilization when export data is present). Host count = ceil(demand ÷ (per-host capacity × overcommit × (1 − growth))) per resource, taking the maximum across CPU, GHz, memory, and HCI storage, plus N+1/N+2 spares. The GHz dimension compares assumed sustained clock per vCPU against physical host clocks (base clock × cores, no overcommit — overcommit is already expressed in the vCPU ratio). CPU models are Intel Xeon 6 SKUs with vendor-published base clocks; turbo frequencies are ignored for sustained sizing. This is capacity sizing, not performance sizing: it does not model IOPS, latency, or NUMA effects. Utilization figures are point-in-time. Overcommit ratios are planner assumptions, not measurements.</p>' +
     '<div class="disclaimer">⚠️ <strong>Indicative analysis, not a quote.</strong> Editions, bundles (VVF/VCF), vSAN entitlements, and partner pricing affect real licensing cost. Validate all figures against an official Broadcom quote before committing to purchases.</div>' +
     '</div></body></html>';
 }
