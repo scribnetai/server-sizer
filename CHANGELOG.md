@@ -20,3 +20,6 @@
 - Fixed: "Generate build plan" button did nothing — the results render function was missing.
 - Fixed: header nav links (How it works / Sizing math / FAQ) now work while the wizard is open — exits to landing, then scrolls to the section.
 - Added: this changelog section, rendered from CHANGELOG.md.
+
+## 2026-09-27
+- Added top-left app-switcher dropdown on the brand mark: one-click jumps to every app in the suite (full index, this page marked).
