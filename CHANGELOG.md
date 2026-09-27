@@ -23,3 +23,4 @@
 
 ## 2026-09-27
 - Added top-left app-switcher dropdown on the brand mark: one-click jumps to every app in the suite (full index, this page marked).
+- Fixed: manual-entry license core math — was undercounting up to 2x; now uses per-socket semantics matching the RVTools path. Renamed manual table header "Cores/host" to "Cores / CPU". Corrected landing privacy banner.
