@@ -15,10 +15,19 @@
 
 <header class="nav">
   <div class="nav-inner">
-    <a class="brand" href="#" id="brandHome">
-      <span class="brand-badge">SZ</span>
-      <span class="brand-name">Server Sizer</span>
-    </a>
+    <div class="brand-dropdown" id="brandDropdown">
+  <button class="brand" id="brandHome" aria-haspopup="true" aria-expanded="false" title="Switch tool">
+    <span class="brand-badge">SZ</span>
+    <span class="brand-name">Server Sizer</span>
+    <span class="brand-caret">▾</span>
+  </button>
+  <div class="brand-menu" role="menu" aria-label="Switch tool">
+    <button class="brand-item is-current" data-home><span class="bi">🖥️</span>Server Sizer<span class="cur">this page</span></button>
+    <a class="brand-item" href="https://scribnetai.github.io/storage-sizer/"><span class="bi">💾</span>Storage Sizer</a>
+    <a class="brand-item" href="https://scribnetai.github.io/network-sizer/"><span class="bi">🌐</span>Network Sizer</a>
+    <a class="brand-item" href="https://scribnetai.github.io/rvtools-analyzer/"><span class="bi">🔍</span>RVTools Analyzer</a>
+  </div>
+</div>
     <nav class="nav-links">
       <a class="cc-link" href="https://scribnetai.github.io/se-command-center/">&#8962; SE Command Center</a>
       <a href="#how">How it works</a>
@@ -286,6 +295,6 @@
 </footer>
 
 <script src="lib/xlsx.full.min.js"></script>
-<script src="js/app.js?v=10"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>
