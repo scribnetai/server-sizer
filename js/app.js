@@ -384,7 +384,7 @@ function applyManual() {
       usedStorageTB: Math.round(stoTB * 10) / 10,
       avgCpuUtil: null, avgMemUtil: null,
       curHosts, curHostCps: curCps,
-      curLicenseCores: (curHosts && curCps) ? curHosts * 2 * Math.max(curCps / 2, 16) : null, // assumes 2 sockets/host
+      curLicenseCores: (curHosts && curCps) ? curHosts * 2 * Math.max(curCps, 16) : null, // assumes 2 sockets/host; curCps is cores per socket
       source: 'manual',
     });
   });
