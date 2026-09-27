@@ -1107,7 +1107,20 @@ function clearSession() {
 function wireApp() {
   wireProjects();
   document.querySelector('.cta').addEventListener('click', (e) => { e.preventDefault(); startWizard(); });
-  $('brandHome').addEventListener('click', (e) => { e.preventDefault(); $('wizard').hidden = true; $('landing').hidden = false; window.scrollTo({ top: 0 }); });
+  // Brand dropdown: toggle the tool-switcher menu; the "this page" item returns to the landing view.
+const brandDD = $('brandDropdown'), brandBtn = $('brandHome');
+function closeBrandMenu(){ brandDD.classList.remove('open'); brandBtn.setAttribute('aria-expanded','false'); }
+brandBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  const open = brandDD.classList.toggle('open');
+  brandBtn.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', (e) => { if (!brandDD.contains(e.target)) closeBrandMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBrandMenu(); });
+brandDD.querySelector('[data-home]').addEventListener('click', () => {
+  closeBrandMenu();
+  $('wizard').hidden = true; $('landing').hidden = false; window.scrollTo({ top: 0 });
+});
   // Nav anchor links must work while the wizard is open: exit to landing first, then scroll.
   document.querySelectorAll('.nav-links a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
     const id = a.getAttribute('href').slice(1);
