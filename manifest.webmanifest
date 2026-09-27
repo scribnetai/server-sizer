@@ -1,0 +1,23 @@
+{
+  "name": "Server Sizer",
+  "short_name": "Server Sizer",
+  "description": "VMware refresh build planner \u2014 right-size hosts by CPU, memory, and GHz.",
+  "id": "https://server-sizer.scribnet.io/",
+  "start_url": "https://server-sizer.scribnet.io/",
+  "scope": "https://server-sizer.scribnet.io/",
+  "display": "standalone",
+  "background_color": "#0a0d13",
+  "theme_color": "#0a0d13",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
