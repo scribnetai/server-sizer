@@ -5,30 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Server Sizer — VMware refresh build planner</title>
 <meta name="description" content="Feed it RVTools data or manual cluster numbers and get a sized refresh build: host specs, host counts, licensing math, and a customer-ready report. 100% in your browser — your data never leaves your PC.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=7">
+<link rel="stylesheet" href="css/styles.css?v=3">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f8cff'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>SZ</text></svg>">
 </head>
 <body>
 
 <header class="nav">
   <div class="nav-inner">
-    <div class="brand-dropdown" id="brandDropdown">
-  <button class="brand" id="brandHome" aria-haspopup="true" aria-expanded="false" title="Switch tool">
-    <span class="brand-badge">SZ</span>
-    <span class="brand-name">Server Sizer</span>
-    <span class="brand-caret">▾</span>
-  </button>
-  <div class="brand-menu" role="menu" aria-label="Switch tool">
-    <button class="brand-item is-current" data-home><span class="bi">🖥️</span>Server Sizer<span class="cur">this page</span></button>
-    <a class="brand-item" href="https://scribnetai.github.io/storage-sizer/"><span class="bi">💾</span>Storage Sizer</a>
-    <a class="brand-item" href="https://scribnetai.github.io/network-sizer/"><span class="bi">🌐</span>Network Sizer</a>
-    <a class="brand-item" href="https://scribnetai.github.io/rvtools-analyzer/"><span class="bi">🔍</span>RVTools Analyzer</a>
-  </div>
-</div>
-    <a class="cc-link" href="https://scribnetai.github.io/se-command-center/"><span class="cc-ico">&#8962;</span>SE Command Center</a>
+    <a class="brand" href="#" id="brandHome">
+      <span class="brand-badge">SZ</span>
+      <span class="brand-name">Server Sizer</span>
+    </a>
     <nav class="nav-links">
       <a href="#how">How it works</a>
       <a href="#math">Sizing math</a>
@@ -44,33 +31,28 @@
     <div class="hero-glow"></div>
     <div class="hero-inner">
       <div class="pill">🔒 100% client-side &mdash; zero data retention</div>
-      <h1>Size the refresh <span class="grad">before</span> you quote it.</h1>
+      <h1>Size the refresh <span class="accent">before</span> you quote it.</h1>
       <p class="lede">Feed in RVTools data or manual cluster numbers, configure each cluster's target hosts, and get a sized build: host specs, host counts, per-core licensing math, and a customer-ready report &mdash; in the browser, with nothing uploaded.</p>
-      <div class="trust-row reveal">
+      <div class="trust-row">
         <div class="trust"><span class="trust-icon">🛡️</span><div><strong>No upload.</strong><span>Data never leaves your PC</span></div></div>
         <div class="trust"><span class="trust-icon">🧠</span><div><strong>No storage.</strong><span>Nothing saved, ever</span></div></div>
         <div class="trust"><span class="trust-icon">📴</span><div><strong>Works offline.</strong><span>Disconnect after load if you like</span></div></div>
         <div class="trust"><span class="trust-icon">👤</span><div><strong>No account.</strong><span>Just open and size</span></div></div>
       </div>
       <a class="cta" href="#start">Start sizing ↓</a>
-      <div class="hero-art" aria-hidden="true">
-        <div class="emojis">🖥️ 💾 ⚡ 🧠 📊</div>
-        <span class="sub">vCPU · RAM · GHz · HCI storage — every sizing dimension, live as you tune</span>
-      </div>
     </div>
   </section>
 
   <section id="how" class="section">
     <div class="wrap">
-      <div class="eyebrow">The process</div>
-      <div class="sec-head"><span class="glyph">🧭</span><h2>How it <span class="grad">works</span></h2></div>
+      <h2>How it works</h2>
       <div class="cards3">
-        <div class="card reveal"><h3>📥 1. Load demand</h3><p>Drop an <strong>RVTools export</strong> (.xlsx) and it rolls up vCPU, vRAM, and storage demand per cluster — or type cluster numbers in manually, or try the demo environment.</p></div>
-        <div class="card reveal"><h3>🎛️ 2. Configure each cluster</h3><p>The mid-step: per-cluster target host specs, platform presets, growth headroom, CPU/RAM overcommit, N+1/N+2, and HCI storage. Live host-count previews as you tune.</p></div>
-        <div class="card reveal"><h3>🚀 3. Get the build plan</h3><p>Worked sizing math per cluster, a bill-of-materials summary, per-core licensing with phantom-core waste, SE talking points, and a downloadable HTML briefing report.</p></div>
+        <div class="card"><h3>1️⃣ Load demand</h3><p>Drop an <strong>RVTools export</strong> (.xlsx) and it rolls up vCPU, vRAM, and storage demand per cluster — or type cluster numbers in manually, or try the demo environment.</p></div>
+        <div class="card"><h3>2️⃣ Configure each cluster</h3><p>The mid-step: per-cluster target host specs, platform presets, growth headroom, CPU/RAM overcommit, N+1/N+2, and HCI storage. Live host-count previews as you tune.</p></div>
+        <div class="card"><h3>3️⃣ Get the build plan</h3><p>Worked sizing math per cluster, a bill-of-materials summary, per-core licensing with phantom-core waste, SE talking points, and a downloadable HTML briefing report.</p></div>
       </div>
 
-      <h3 class="mt"><span class="glyph sm" style="vertical-align:-8px;margin-right:8px">📑</span>What it reads from RVTools</h3>
+      <h3 class="mt">What it reads from RVTools</h3>
       <table class="data">
         <thead><tr><th>Tab</th><th>What it unlocks</th></tr></thead>
         <tbody>
@@ -82,7 +64,7 @@
       </table>
       <p class="muted">Same tolerant parser as RVTools Analyzer — modern and legacy column names both work, missing tabs degrade gracefully. No export handy? Manual entry takes cluster-level totals, which is all the math needs.</p>
 
-      <h3 class="mt" id="math"><span class="glyph sm" style="vertical-align:-8px;margin-right:8px">🧮</span>Sizing math, <span class="grad">explained</span></h3>
+      <h3 class="mt" id="math">Sizing math, explained</h3>
       <p class="muted">For each cluster, demand is computed from your chosen basis (<strong>allocated</strong> resources or <strong>actual utilization</strong> from the export), then divided by usable per-host capacity:</p>
       <p><code>cpu hosts = ceil( demand vCPU ÷ (host cores × cpu overcommit × (1 − growth)) )</code></p>
       <p><code>ghz hosts = ceil( demand vCPU × ghz/vCPU ÷ (host cores × base clock × (1 − growth)) )</code></p>
@@ -105,7 +87,7 @@
       </table>
       <p class="muted">That cluster is <strong>memory-bound</strong> — the SE takeaway: spec more RAM per host (or a denser platform) before adding boxes. Every cluster in the tool shows this worked math with your numbers plugged in.</p>
 
-      <h3 class="mt"><span class="glyph sm" style="vertical-align:-8px;margin-right:8px">⚖️</span>Honest limitations</h3>
+      <h3 class="mt">Honest limitations</h3>
       <ul class="muted">
         <li>This is <strong>capacity sizing, not performance sizing</strong>. It doesn't model IOPS, latency, NUMA boundaries, or noisy-neighbor effects — validate the final spec against performance data.</li>
         <li>Utilization from RVTools is <strong>point-in-time</strong>, not an average. "Actual utilization" basis inherits that caveat.</li>
@@ -119,20 +101,19 @@
 
   <section id="faq" class="section alt">
     <div class="wrap">
-      <div class="eyebrow">Help</div>
-      <div class="sec-head"><span class="glyph">💬</span><h2>Frequently asked <span class="grad">questions</span></h2></div>
+      <h2>Frequently asked questions</h2>
       <div class="faq-list">
-        <details><summary>🔒 Is my data uploaded anywhere?</summary><p>No. Files are read with the browser's FileReader API and parsed in memory by a vendored copy of SheetJS running in this page; manual entries never leave the form. There is no server and no network request carrying your data — check devtools' network tab, or disconnect after the page loads.</p></details>
-        <details><summary>💾 Is anything stored in my browser?</summary><p>Only if you use the Projects feature: named projects and the autosaved session live in localStorage on this machine only — never uploaded. Everything else lives in the page's JavaScript memory for the session. Hit "Clear session data" or close the tab and the in-memory analysis is gone.</p></details>
-        <details><summary>📊 Do I need an RVTools export, or can I type numbers in?</summary><p>Either. The export gives you per-cluster demand automatically (plus utilization and current-state licensing). Manual entry just needs cluster-level totals: VMs, vCPUs, RAM, storage, and optionally current hosts — five minutes with the customer's capacity spreadsheet.</p></details>
-        <details><summary>🎛️ What's the "configure each cluster" step for?</summary><p>Refreshes are never one-size-fits-all: the VDI cluster wants dense hosts, the database cluster wants RAM, the ROBO site wants N+2. The mid-step lets you set target host specs, growth, overcommit, redundancy, and HCI storage per cluster before the final math runs — with a live host-count preview as you tune.</p></details>
-        <details><summary>⚡ Why does it model GHz as well as vCPUs?</summary><p>Because vCPU count alone hides clock speed: a 128-core 2.0 GHz host and a 32-core 3.5 GHz host look very different to clock-sensitive workloads. Each target CPU is a real Intel Xeon 6 SKU with its published base clock (turbo ignored — sustained sizing). The tool checks your assumed sustained GHz per vCPU against the physical clocks per host; when GHz sets the host count, your overcommit ratio is promising more clock than the silicon delivers — pick a higher-clock SKU or ease off the overcommit.</p></details>
-        <details><summary>📄 Can I share the results with my team or the customer?</summary><p>Yes — the Build plan tab generates a standalone HTML briefing you can download and email. Fully self-contained, no external dependencies, and it contains only the analysis, which you control. Scrub customer names from cluster labels first if the report leaves your org.</p></details>
-        <details><summary>🧪 Does it replace a real capacity assessment?</summary><p>No — it's a first-pass sizing from inventory and point-in-time utilization. It can't see performance history or workload behavior, so treat outputs as the starting point for the real assessment, not the verdict.</p></details>
-        <details><summary>🧮 How does licensing math work?</summary><p>Broadcom licenses vSphere per physical core with a 16-core minimum per socket: <code>license cores = sockets × max(cores per socket, 16)</code>. The tool applies this to your target host spec, rolls it up across the build, and compares against current-state cores when vHost data is present. vSAN, NSX, and Aria aren't modeled.</p></details>
-        <details><summary>📴 Can I use it on a customer site with no internet?</summary><p>Yes. Once the page has loaded, everything — including the spreadsheet parser — runs locally.</p></details>
-        <details><summary>🤔 Why does it ask about overcommit instead of measuring it?</summary><p>Because safe overcommit is a judgment call that depends on workload behavior the tool can't see (CPU-ready, memory pressure, growth). It gives you the sliders with sane defaults and shows exactly how they move the host count, so the assumption is explicit instead of buried.</p></details>
-        <details><summary>💵 Does it do pricing?</summary><p>No — it produces host counts, per-host specs, and license-core counts. Your VAR quoting tooling turns that BOM into dollars.</p></details>
+        <details><summary>Is my data uploaded anywhere?</summary><p>No. Files are read with the browser's FileReader API and parsed in memory by a vendored copy of SheetJS running in this page; manual entries never leave the form. There is no server and no network request carrying your data — check devtools' network tab, or disconnect after the page loads.</p></details>
+        <details><summary>Is anything stored in my browser?</summary><p>Only if you use the Projects feature: named projects and the autosaved session live in localStorage on this machine only — never uploaded. Everything else lives in the page's JavaScript memory for the session. Hit "Clear session data" or close the tab and the in-memory analysis is gone.</p></details>
+        <details><summary>Do I need an RVTools export, or can I type numbers in?</summary><p>Either. The export gives you per-cluster demand automatically (plus utilization and current-state licensing). Manual entry just needs cluster-level totals: VMs, vCPUs, RAM, storage, and optionally current hosts — five minutes with the customer's capacity spreadsheet.</p></details>
+        <details><summary>What's the "configure each cluster" step for?</summary><p>Refreshes are never one-size-fits-all: the VDI cluster wants dense hosts, the database cluster wants RAM, the ROBO site wants N+2. The mid-step lets you set target host specs, growth, overcommit, redundancy, and HCI storage per cluster before the final math runs — with a live host-count preview as you tune.</p></details>
+        <details><summary>Why does it model GHz as well as vCPUs?</summary><p>Because vCPU count alone hides clock speed: a 128-core 2.0 GHz host and a 32-core 3.5 GHz host look very different to clock-sensitive workloads. Each target CPU is a real Intel Xeon 6 SKU with its published base clock (turbo ignored — sustained sizing). The tool checks your assumed sustained GHz per vCPU against the physical clocks per host; when GHz sets the host count, your overcommit ratio is promising more clock than the silicon delivers — pick a higher-clock SKU or ease off the overcommit.</p></details>
+        <details><summary>Can I share the results with my team or the customer?</summary><p>Yes — the Build plan tab generates a standalone HTML briefing you can download and email. Fully self-contained, no external dependencies, and it contains only the analysis, which you control. Scrub customer names from cluster labels first if the report leaves your org.</p></details>
+        <details><summary>Does it replace a real capacity assessment?</summary><p>No — it's a first-pass sizing from inventory and point-in-time utilization. It can't see performance history or workload behavior, so treat outputs as the starting point for the real assessment, not the verdict.</p></details>
+        <details><summary>How does licensing math work?</summary><p>Broadcom licenses vSphere per physical core with a 16-core minimum per socket: <code>license cores = sockets × max(cores per socket, 16)</code>. The tool applies this to your target host spec, rolls it up across the build, and compares against current-state cores when vHost data is present. vSAN, NSX, and Aria aren't modeled.</p></details>
+        <details><summary>Can I use it on a customer site with no internet?</summary><p>Yes. Once the page has loaded, everything — including the spreadsheet parser — runs locally.</p></details>
+        <details><summary>Why does it ask about overcommit instead of measuring it?</summary><p>Because safe overcommit is a judgment call that depends on workload behavior the tool can't see (CPU-ready, memory pressure, growth). It gives you the sliders with sane defaults and shows exactly how they move the host count, so the assumption is explicit instead of buried.</p></details>
+        <details><summary>Does it do pricing?</summary><p>No — it produces host counts, per-host specs, and license-core counts. Your VAR quoting tooling turns that BOM into dollars.</p></details>
       </div>
     </div>
   </section>
@@ -140,7 +121,7 @@
   <section id="changelog" class="section">
     <div class="wrap">
       <div class="eyebrow">History</div>
-      <div class="sec-head"><span class="glyph">📜</span><h2><span class="grad">Changelog</span></h2></div>
+      <h2>Changelog</h2>
       <details class="changelog-details">
         <summary>What changed and when.</summary>
         <div id="changelog-body"></div>
@@ -180,18 +161,18 @@
 
     <!-- STEP 1: DATA -->
     <section id="stepData" class="wstep">
-      <div class="step-head"><span class="step-num">1</span><h2>Load demand</h2><span class="glyph sm">📥</span></div>
+      <div class="step-head"><span class="step-num">1</span><h2>Load demand</h2></div>
       <p class="muted">Three ways in — pick whichever matches the engagement. RVTools gives the richest picture; manual entry works from any capacity spreadsheet.</p>
       <div class="cards3" id="start">
-        <div class="card reveal">
+        <div class="card">
           <h3>📊 RVTools export</h3>
           <p>Drop the <code>.xlsx</code> (File → Export all to Excel). Per-cluster demand, utilization, and current hosts come through automatically.</p>
         </div>
-        <div class="card reveal">
+        <div class="card">
           <h3>⌨️ Manual entry</h3>
           <p>Type cluster totals straight in — VMs, vCPUs, RAM, storage. Good enough for the math; takes five minutes.</p>
         </div>
-        <div class="card reveal">
+        <div class="card">
           <h3>🎲 Demo data</h3>
           <p>A realistic synthetic environment (3 clusters, different profiles) generated in your browser. Try the whole flow in a minute.</p>
         </div>
@@ -246,7 +227,7 @@
 
     <!-- STEP 2: CONFIGURE -->
     <section id="stepConfig" class="wstep" hidden>
-      <div class="step-head"><span class="step-num">2</span><h2>Configure each cluster</h2><span class="glyph sm">🎛️</span></div>
+      <div class="step-head"><span class="step-num">2</span><h2>Configure each cluster</h2></div>
       <p class="muted">Set the target for every cluster independently — host spec, growth, overcommit, redundancy. The host count preview updates live as you tune. Expand a cluster to configure it.</p>
       <div id="clusterCards"></div>
       <div class="toolbar" style="margin-top:20px">
@@ -261,7 +242,7 @@
       <div class="dash-head">
         <div>
           <div class="dash-file"><span class="file-chip">📄 <span id="dashFileName">—</span></span><span class="muted small" id="dashMeta"></span></div>
-          <div class="sec-head"><h2>Refresh build plan</h2><span class="glyph sm">🚀</span></div>
+          <h2>Refresh build plan</h2>
         </div>
         <div class="dash-actions">
           <button class="btn ghost" id="backToConfigBtn">← Configure</button>
@@ -289,12 +270,11 @@
 <footer>
   <div class="wrap foot">
     <span class="muted small">Server Sizer — runs entirely in your browser. Not affiliated with Broadcom/VMware.</span>
-    <a class="muted small" href="https://scribnet.io" target="_blank" rel="noopener">scribnet.io</a>
     <a class="muted small" href="https://github.com/scribnetai/server-sizer" target="_blank" rel="noopener">GitHub</a>
   </div>
 </footer>
 
 <script src="lib/xlsx.full.min.js"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/app.js?v=9"></script>
 </body>
 </html>
