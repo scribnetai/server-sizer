@@ -440,6 +440,12 @@ function segHTML(seg, opts, cur) {
   ).join('') + '</div>';
 }
 
+function paintRange(el) {
+  if (!el || el.type !== 'range') return;
+  const min = parseFloat(el.min) || 0, max = parseFloat(el.max) || 100, v = parseFloat(el.value) || 0;
+  const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
+  el.style.setProperty('--fill', pct.toFixed(1) + '%');
+}
 function renderConfig() {
   const wrap = $('clusterCards');
   wrap.innerHTML = APP.clusters.map((c, i) => {
@@ -512,8 +518,9 @@ function renderConfig() {
       card.classList.toggle('open');
     });
     card.querySelectorAll('[data-cfg]').forEach((el) => {
-      el.addEventListener('input', () => onCfgInput(c.id, card));
-      el.addEventListener('change', () => onCfgInput(c.id, card));
+      el.addEventListener('input', () => { paintRange(el); onCfgInput(c.id, card); });
+      el.addEventListener('change', () => { paintRange(el); onCfgInput(c.id, card); });
+      paintRange(el);
     });
     card.querySelectorAll('[data-seg]').forEach((seg) => {
       seg.querySelectorAll('button:not([disabled])').forEach((b) => {
