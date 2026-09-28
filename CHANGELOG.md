@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-09-28
+- Migrated legacy `scribnetai.github.io` links to `https://<app>.scribnet.io` for the HTTPS-enforced apps (se-command-center, server-sizer, network-sizer); links to the remaining apps left on the legacy URLs until their TLS certs are issued. Touched: index.html, js/app-switcher.js.
+
 ## 2026-09-26
 - Restyled to a Physgun-style dark gaming-host vibe: near-black navy background with radial blue glow, Outfit display font, blue→cyan gradients, blue-gradient glyph tiles on section headings, and pill-style segmented option groups.
 - Sliders are now custom-styled (glowing blue→cyan fill driven by a --fill var, white thumb with blue halo, min/mid/max scale labels) and every live value shows in a dark-blue pill badge that flashes on change — all outputs update in real time as you drag.
