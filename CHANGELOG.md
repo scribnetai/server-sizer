@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-09-28
+- Added a floating Feedback button (bottom-right) that opens a dialog to send feedback via email — topic chips, optional name, and message, addressed to the site owner with the app name in the subject.
+
+## 2026-09-28
 - Fixed: slider track fill was stuck at 50% on the config cards — the theme refresh paints the track with a `--fill` CSS variable, but nothing in the app ever set it. Sliders now update their fill live as you drag, like the other tools.
 ## 2026-09-28
 - TLS certificate provisioned for the `server-sizer.scribnet.io` custom domain (GitHub's stuck DNS check was reset 2026-09-28); HTTPS is now enforced on the site. App-switcher menu links switched from legacy `scribnetai.github.io` URLs to direct `https://<app>.scribnet.io` URLs for all 10 apps (footer/launcher links updated likewise). This entry also covers the net-zero CNAME delete/re-add commits from the DNS-check reset, which carried no changelog entries. Touched: index.html, js/app-switcher.js.
