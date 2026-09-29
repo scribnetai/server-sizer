@@ -5,7 +5,7 @@ cluster numbers in manually), configure each cluster's target hosts, and get a
 sized build: host specs, host counts, per-core licensing math, SE talking
 points, and a customer-ready HTML report.
 
-**Live:** https://scribnetai.github.io/server-sizer/
+**Live:** https://server-sizer.scribnet.io/
 
 ## How it works
 
