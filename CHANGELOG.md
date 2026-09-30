@@ -50,3 +50,8 @@
 ## 2026-09-27
 - Added top-left app-switcher dropdown on the brand mark: one-click jumps to every app in the suite (full index, this page marked).
 - Fixed: manual-entry license core math — was undercounting up to 2x; now uses per-socket semantics matching the RVTools path. Renamed manual table header "Cores/host" to "Cores / CPU". Corrected landing privacy banner.
+
+## 2026-09-29 — Prompts removed from app-switcher dropdown
+
+- Removed the Prompts entry from the in-app dropdown menu so it lists only the SE-job apps (plus the scribnet.io home link). The prompts page itself is untouched.
+
